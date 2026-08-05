@@ -2,7 +2,7 @@
   "lspServers": {
     "gdscript": {
       "command": "python3",
-      "args": ["/Users/clundquist/code/gdscript-lsp-bridge/bridge.py"],
+      "args": ["/absolute/path/to/gdscript-lsp-bridge/bridge.py"],
       "extensionToLanguage": {
         ".gd": "gdscript"
       }

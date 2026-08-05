@@ -275,6 +275,7 @@ class BridgeSession:
         self.link: ServerLink | None = None
         self.project_root = ""
         self._spawned_engine = False
+        self._guard_pid = 0
         self._initialize_params: dict[str, Any] = {}
         self._open_documents: dict[str, dict[str, Any]] = {}
         self._documents_lock = threading.Lock()
@@ -345,6 +346,7 @@ class BridgeSession:
             self._fail_initialize(request_id, str(error))
             return False
         self._spawned_engine = not self.handle.reused
+        self._arm_parent_death_guard()
 
         outgoing = body
         if paths.physical_root(workspace) != root:
@@ -561,6 +563,7 @@ class BridgeSession:
                     godot=self.godot,
                     logger=self.log,
                 )
+                self._arm_parent_death_guard()
                 sock = engine_module.connect(self.handle.port)
                 self._rehandshake(sock)
             except (engine_module.EngineError, OSError, framing.FramingError) as error:
@@ -652,6 +655,36 @@ class BridgeSession:
             return
         self.log.info(f"stopping engine pid={self.handle.pid} (persist disabled)")
         engine_module.stop_root(self.project_root, self.registry)
+
+    def _arm_parent_death_guard(self) -> None:
+        """Binds the engine's life to this process when it must not outlive it.
+
+        Teardown above already stops the engine on an orderly exit, but a
+        teardown only runs when this process gets to run it -- a SIGKILL from an
+        editor or an agent runner's watchdog does not. The guard sidecar covers
+        exactly that gap. See :mod:`gdscript_lsp_bridge.guard`.
+
+        Armed only when BOTH hold, matching teardown's own conditions:
+
+        * persist is disabled -- otherwise a warm engine is the intended result;
+        * this session spawned the engine -- a reused engine belongs to whoever
+          spawned it, and guarding it here would pull it out from under another
+          live session exactly as stopping it would.
+        """
+        if self.persist or not self._spawned_engine or self.handle is None:
+            return
+        if getattr(self, "_guard_pid", 0):
+            return
+        self._guard_pid = engine_module.spawn_parent_death_guard(
+            self.handle.pid, self.handle.port
+        )
+        if self._guard_pid:
+            self.log.info(
+                f"armed parent-death guard pid={self._guard_pid} "
+                f"for engine pid={self.handle.pid}"
+            )
+        else:
+            self.log.info("parent-death guard unavailable; engine may outlive a kill")
 
 
 def _parse(body: bytes) -> dict[str, Any] | None:

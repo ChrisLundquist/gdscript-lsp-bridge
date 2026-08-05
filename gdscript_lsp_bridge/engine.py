@@ -43,6 +43,7 @@ import os
 import shutil
 import socket
 import subprocess
+import sys
 import time
 from typing import Sequence
 
@@ -283,6 +284,51 @@ def spawn(godot: str, root: str, port: int, log_path: str) -> int:
         raise EngineError(f"cannot start {godot}: {error}") from error
     finally:
         log.close()
+    return int(process.pid)
+
+
+def guard_marker(port: int) -> str:
+    """The argv fragment a parent-death guard matches to prove pid identity.
+
+    ``--lsp-port N`` is unique among live engines: two of ours cannot hold one
+    port, so a recycled pid running anything else cannot match it.
+    """
+    return f"--lsp-port {port}"
+
+
+def spawn_parent_death_guard(engine_pid: int, port: int) -> int:
+    """Starts the sidecar that stops ``engine_pid`` when THIS process dies.
+
+    Only meaningful when the caller does not want a warm engine to outlive it
+    (``GDSCRIPT_LSP_PERSIST`` disabled). The bridge's own teardown already
+    handles the orderly case; this covers the SIGKILL case, where no teardown
+    of ours runs at all. See :mod:`gdscript_lsp_bridge.guard`.
+
+    Returns the guard pid, or 0 when no guard was started (Windows, or the
+    spawn failed -- a missing guard degrades to the previous behaviour rather
+    than failing the session).
+    """
+    if os.name == "nt":
+        return 0
+    argv = [
+        sys.executable,
+        "-m",
+        "gdscript_lsp_bridge.guard",
+        str(os.getpid()),
+        str(engine_pid),
+        guard_marker(port),
+    ]
+    try:
+        process = subprocess.Popen(
+            argv,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        )
+    except OSError:
+        return 0
     return int(process.pid)
 
 

@@ -1,0 +1,15 @@
+; Engine configuration file for the bridge's throwaway test project.
+; Deliberately minimal: enough for Godot to treat this directory as a project
+; root so the language server can index the scripts under scripts/.
+
+config_version=5
+
+[application]
+
+config/name="LSP Bridge Test Project"
+config/features=PackedStringArray("4.4", "GL Compatibility")
+run/main_scene=""
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"

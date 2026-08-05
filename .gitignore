@@ -1,0 +1,15 @@
+# Throwaway probes and measurements written during development.
+scratch/
+
+# Godot's per-project import cache. Regenerable, and the test project's copy is
+# rebuilt by any engine run.
+.godot/
+.import/
+
+# Python bytecode.
+__pycache__/
+*.py[cod]
+
+# Editor and OS noise.
+.DS_Store
+*.swp

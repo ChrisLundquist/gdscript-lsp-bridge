@@ -1,0 +1,32 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "gdscript-lsp-bridge",
+  "description": "GDScript code intelligence for Claude Code, served by Godot's own built-in language server",
+  "owner": {
+    "name": "Chris Lundquist"
+  },
+  "plugins": [
+    {
+      "name": "gdscript-lsp",
+      "description": "Go-to-definition, find-references, hover and document symbols for .gd files, from the GDScript language server built into the Godot editor binary. Requires Godot 4.x on PATH; no other dependencies.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Chris Lundquist"
+      },
+      "source": "./",
+      "category": "development",
+      "strict": false,
+      "lspServers": {
+        "gdscript": {
+          "command": "python3",
+          "args": [
+            "${CLAUDE_PLUGIN_ROOT}/bridge.py"
+          ],
+          "extensionToLanguage": {
+            ".gd": "gdscript"
+          }
+        }
+      }
+    }
+  ]
+}

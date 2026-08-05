@@ -46,21 +46,28 @@ deployment.
 
 ## Register it with Claude Code
 
-Add to `.lsp.json`, using an **absolute** path:
+This repository is also a Claude Code plugin marketplace, so installing it is
+two commands:
 
-```json
-{
-  "lspServers": {
-    "gdscript": {
-      "command": "python3",
-      "args": ["/Users/you/code/gdscript-lsp-bridge/bridge.py"],
-      "extensionToLanguage": { ".gd": "gdscript" }
-    }
-  }
-}
+```sh
+claude plugin marketplace add ChrisLundquist/gdscript-lsp-bridge
+claude plugin install gdscript-lsp@gdscript-lsp-bridge
 ```
 
-No project path is configured. The bridge reads `rootUri` / `workspaceFolders`
+**Then restart.** Language servers are resolved when a session starts, so a
+newly installed one is invisible to the session that installed it.
+
+The plugin declares the language server the same way Claude Code's own
+`clangd-lsp` and `gopls-lsp` plugins do — an `lspServers` block in
+[`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json) naming the
+command and the extensions it claims. It resolves `bridge.py` through
+`${CLAUDE_PLUGIN_ROOT}`, so no absolute path is written anywhere and nothing
+has to be added to a project's own repository.
+
+A project-root `.lsp.json` is **not** a supported registration path; Claude
+Code loads language servers from plugins.
+
+No project path is configured either. The bridge reads `rootUri` / `workspaceFolders`
 out of the `initialize` request the client already sends, then searches for
 `project.godot` at that directory, at its ancestors, and up to two levels
 below it. A monorepo whose game lives in `game/` therefore works unconfigured.
